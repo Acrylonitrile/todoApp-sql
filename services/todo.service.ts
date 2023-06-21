@@ -1,6 +1,7 @@
 import mysql, { ResultSetHeader } from "mysql2"
 import dotenv from "dotenv"
 dotenv.config()
+import todoTable from "../models/todoTable.js"
 
 const tableName = "todos"
 
@@ -15,51 +16,42 @@ const pool = mysql
 
 export class TodoService {
   getData = async () => {
-    const [result] = await pool.query(`SELECT * FROM ${tableName}`)
+    const result = await todoTable.findAll({
+      attributes: ["id", "name"]
+    })
     return result
   }
   getItem = async (id: number) => {
-    const [result] = await pool.query(
-      `
-        SELECT * FROM ${tableName}
-        WHERE id = ?
-        `,
-      [id]
-    )
+    const result = await todoTable.findAll({
+      where: {
+        id: id
+      },
+      attributes: ["id", "name"]
+    })
     return result
   }
   addItem = async (name: string) => {
-    const result = (
-      await pool.query(
-        `
-    INSERT INTO ${tableName} (id,name)
-    VALUES (DEFAULT,?)
-    `,
-        [name]
-      )
-    )[0] as ResultSetHeader
-    const id = result.insertId
-    return this.getItem(id)
+    await todoTable.create({
+      name: name
+    })
   }
   updateItem = async (id: number, name: string) => {
-    await pool.query(
-      `
-          UPDATE ${tableName}
-          SET name = ?
-          WHERE id = ?
-          `,
-      [name, id]
+    await todoTable.update(
+      { name: name },
+      {
+        where: {
+          id: id
+        }
+      }
     )
-    return this.getItem(id)
+    return await this.getItem(id)
   }
   deleteItem = async (id: number) => {
-    await pool.query(
-      `
-              DELETE FROM ${tableName}
-              WHERE id = ?
-              `,
-      [id]
-    )
-    return this.getData()
+    todoTable.destroy({
+      where: {
+        id: id
+      }
+    })
+    return await this.getData()
   }
 }
